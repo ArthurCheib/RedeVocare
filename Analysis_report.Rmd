@@ -1,0 +1,239 @@
+---
+title: "EDA - Relatório Rede Vocare"
+author: "Arthur Cheib"
+date: "12 de maio de 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(ggthemes)
+library(scales)
+library(leaflet)
+
+# Dados obtidos pela Fundação Botín
+censo_01 <- readxl::read_xlsx(path = "censoBR_01.xlsx", sheet = 1, col_names = TRUE)
+
+# Dados obtdo no censo da Rede Vocare  
+censo_02 <- readxl::read_xlsx(path = "censoBR_02.xlsx", sheet = 1, col_names = TRUE)
+```
+
+# 1 Escopo da Análise
+
+A análise dos dados obtidos através do Censo da Rede Vocare
+
+Censo 01 - 67/67 respostas: dados cadastrais
+Censo 02 - 63/67 respostas: dados cadastrais + gerais 
+
+# 2 Cruzamentos
+
+O escopo dos cruzamentos requisitados encontra-se formalizado em [arquivo word](https://docs.google.com/document/d/1tSrEHDH85UIyrhZ_kqPJVLL9fMH8ZMLoespqXv82aNY)
+
+## 2.1 - Webnários Temáticos
+
+Para elaboração deste Gráfico foram filtrados apenas os membros que estão estudando atualmente e que responderam ter disposição de colaborar em projetos igual a "Sim" ou "Talvez". Além disso, dividiu-se estes membros em dois grupos: I) Alta Identificação com a Rede; II) Baixa Identificação com a Rede. Essa divisão foi feita a partir da nota dada por estes membros no quesito identificação com a Rede. Se abaixo da nota média geral (média da nota dada neste memsmo quesitos pelos 63 respondentes do questionário), então foram classificados como "Baixa Identificação", se acima, então "Alta Identificação". 
+
+```{r}
+### Grau de Interesse
+temas_interesse <- c("OPCAO_01", "OPCAO_02", "OPCAO_03", "OPCAO_04", "OPCAO_05", "OPCAO_06")
+
+censo_02 %>% 
+  select(COD_PESSOA, TEMAS_INTERESSE) %>% 
+  separate(col = TEMAS_INTERESSE, sep = ",", remove = T, fill = "right", into = temas_interesse, extra = "merge") %>% 
+  select(-OPCAO_06) %>% 
+  gather(key = "PREFERENCIA", value = "TEMA_INTERESSE", -COD_PESSOA) %>%
+  na.omit() %>% 
+  group_by(PREFERENCIA, TEMA_INTERESSE) %>% 
+  summarize(TOTAL_VOTOS = n()) %>%
+  filter(TOTAL_VOTOS > 1) %>% 
+  top_n(n = 2, wt = TOTAL_VOTOS) %>% 
+  arrange(PREFERENCIA, -TOTAL_VOTOS)
+
+
+### Escala de Identificação
+escala_identificacao_webnario_02 <- mean(mean(censo_02$IDENTIFICACAO_REDE))
+
+censo_02 %>% 
+  filter(SE_ESTUDA == "SIM") %>% 
+  filter(INTERESSE_COLABORAR_PROJETOS == "Sim" | INTERESSE_COLABORAR_PROJETOS == "Talvez") %>% 
+  select(IDENTIFICACAO_REDE, INTERESSE_COLABORAR_PROJETOS, LOCAL_ESTUDO, TEMA_ESTUDO) %>% 
+  mutate(GRUPO_IDENTIFICACAO = case_when(IDENTIFICACAO_REDE <= escala_identificacao_webnario_02 ~ "BAIXA \nIDENTIFICAÇÃO",
+                                         IDENTIFICACAO_REDE > escala_identificacao_webnario_02 ~ "ALTA \nIDENTIFICAÇÃO")) %>%
+  mutate(TEMA_ESTUDO = fct_reorder(TEMA_ESTUDO, IDENTIFICACAO_REDE)) %>% 
+  ggplot(aes(x = TEMA_ESTUDO, fill = TEMA_ESTUDO)) +
+  geom_bar() +
+  theme_light() +
+  coord_flip() +
+  facet_wrap(~GRUPO_IDENTIFICACAO) +
+  labs(title = "Áreas de Estudo dos Membros da Rede por Grau de Identificação",
+       subtitle = "Grau de Identificação classificado pela nota média geral da Rede (6.6)",
+       x = "",
+       y = "Quantidade de Membros cursando") +
+  theme(legend.position = "")
+```
+
+## 2.2 - Engajamento dos Membros
+
+```{r}
+df_tx_engajamento <- censo_02 %>% 
+  filter(INTERESSE_COLABORAR_PROJETOS == "Sim" | INTERESSE_COLABORAR_PROJETOS == "Talvez") %>% 
+  select(IDENTIFICACAO_REDE, CONHECIMENTO_REDE, INTERESSE_COLABORAR_PROJETOS)
+```
+
+**Membros com Interesse em colaborar:**
+- Total: `r nrow(censo_02 %>% filter(INTERESSE_COLABORAR_PROJETOS == "Sim"))`
+- Dados:
+`r summary(censo_02 %>% filter(INTERESSE_COLABORAR_PROJETOS == "Sim") %>% select(CONHECIMENTO_REDE))`
+
+**Membros que Talvez se interessem em colaborar:**
+- Total: `r nrow(censo_02 %>% filter(INTERESSE_COLABORAR_PROJETOS == "Talvez"))`
+- Dados:
+`r summary(censo_02 %>% filter(INTERESSE_COLABORAR_PROJETOS == "Talvez") %>% select(CONHECIMENTO_REDE))`
+
+```{r}
+df_tx_engajamento %>% 
+  ggplot(aes(INTERESSE_COLABORAR_PROJETOS, CONHECIMENTO_REDE)) +
+  geom_boxplot() +
+  theme_light() +
+  labs(title = "Interesse em Colaborar X Conhecimento da Rede",
+       y = "Conhecimento da Rede",
+       x = "Anima colaborar?") +
+  theme(legend.position = "none",
+        plot.title = element_text( size = 16))
+```
+
+## 2.3 - Origem X Raça X Renda
+
+```{r}
+
+```
+
+## 2.4 - Raça X Renda X Ocupação Atual
+
+```{r}
+
+```
+
+
+# 3 Dados Gerais
+
+## 3.1 - Ranking de Mídias Digitas
+
+Vencedora: WhatsApp
+
+```{r}
+df_censo_02 %>% 
+  select(INSTAGRAM, FACEBOOK, TWITTER, WHATSAPP) %>% 
+  gather(key = "MIDIA_DIGITAL", value = "NOTA_MEDIA_PREFERENCIA") %>%
+  group_by(MIDIA_DIGITAL) %>% 
+  summarize(TOTAL_VOTOS = sum(!is.na(NOTA_MEDIA_PREFERENCIA)),
+            NOTA_MEDIA = mean(NOTA_MEDIA_PREFERENCIA, na.rm = TRUE)) %>% 
+  arrange(-NOTA_MEDIA) %>% 
+  setNames(c("MÍDIA DIGITAL", "TOTAL DE VOTOS", "NOTA MÉDIA"))
+```
+
+## 3.2 - Formas de Comunicação
+
+```{r}
+melhores_meios <- c("1ª OPÇÃO", "2ª OPÇÃO", "OPCAO_03")
+
+censo_02 %>% 
+  select(COD_PESSOA, MELHOR_MEIO_COMUNICACAO) %>% 
+  mutate(MELHOR_MEIO_COMUNICACAO = str_trim(string = MELHOR_MEIO_COMUNICACAO, side = "both")) %>% 
+  separate(col = MELHOR_MEIO_COMUNICACAO, sep = ",", remove = T, fill = "right", into = melhores_meios, extra = "merge") %>%
+  select(-OPCAO_03) %>% 
+  gather(key = "PREFERENCIA", value = "MELHOR_MEIO", -COD_PESSOA) %>%
+  na.omit() %>% 
+  group_by(PREFERENCIA, MELHOR_MEIO) %>% 
+  summarize(VOTOS = n()) %>% 
+  top_n(n = 2, wt = VOTOS) %>% 
+  setNames(c("ORDEM DE PREFERÊNCIA", "MELHOR MEIO DE COMUNICAÇÃO", "# DE VOTOS"))
+```
+
+## 3.3 - Participação no Wpp
+
+```{r}
+df_censo_02 %>%
+  mutate(GRAU_PARTICIPACAO_WPP_REDE = factor(GRAU_PARTICIPACAO_WPP_REDE, levels = c("Sim e interajo frequentemente", "Não", "Sim, mas não interajo", "Sim, mas interajo com pouca frequência"))) %>% 
+  ggplot(aes(x = GRAU_PARTICIPACAO_WPP_REDE, fill = GRAU_PARTICIPACAO_WPP_REDE)) + 
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  scale_y_continuous(labels=percent) +
+  theme_economist() +
+  theme(legend.position = "none") +
+  coord_flip() +
+  labs(title = "Interação dos Membros da Rede no WhatsApp",
+       y = "% dos Membros",
+       x = "")
+```
+
+
+## 3.4 - Alma Mater
+
+```{r}
+censo_01 %>% 
+  count(UNIVERSIDADE) %>% arrange(-n)
+```
+
+
+## 3.5 - Carreira Universitária
+
+```{r}
+censo_01 %>%
+  count(ESTUDOS) %>% arrange(-n)
+```
+
+## 3.6 - Botineiros pelo Mundo
+
+```{r}
+
+```
+
+# 4 Extras
+
+## 4.1 - Análise de Preenchimento do Formulário 
+
+```{r}
+df_censo_02 %>%
+  ggplot(aes(y = DIAS_CORRIDOS)) +
+  geom_boxplot() +
+  theme_economist() +
+  scale_y_continuous(breaks = seq(0, 44, 4))
+```
+
+```{r}
+escala_identificacao <- quantile(df_censo_02$IDENTIFICACAO_REDE)
+
+# Boxplot relacionando grau de identificação com a Rede e Dias decorridos para preenchimento dos dados do Censo
+df_censo_02 %>% 
+  mutate(GRUPO_IDENTIFICACAO = case_when(IDENTIFICACAO_REDE <= escala_identificacao[[1]] ~ "BAIXA \nIDENTIFICAÇÃO",
+                                         IDENTIFICACAO_REDE > escala_identificacao[[1]] & IDENTIFICACAO_REDE <= escala_identificacao[[2]] ~                                                                                           "MÉDIA \nIDENTIFICAÇÃO",
+                                         IDENTIFICACAO_REDE > escala_identificacao[[2]] & IDENTIFICACAO_REDE <= escala_identificacao[[3]] ~                                                                                           "ALTA \nIDENTIFICAÇÃO",
+                                         IDENTIFICACAO_REDE >= escala_identificacao[[4]] ~ "TOTAL \nIDENTIFICAÇÃO")) %>%
+  ggplot(aes(x = fct_reorder(GRUPO_IDENTIFICACAO, DIAS_CORRIDOS), y = DIAS_CORRIDOS)) +
+  geom_boxplot() +
+  theme_economist() +
+  scale_y_continuous(breaks = seq(0, 44, 4))
+```
+
+```{r}
+summary(df_censo_02$HORA)
+```
+
+# 5 Comentários & Sugestões
+
+## 5.1 - Aprimoramentos do Formulário
+
+0. Distinguir entre Censo (dados essencialmente informativos) e Pesquisa de Interesse/satisfação.
+
+1. Aprimoramento do Formulário - em se tratando de um Censo
+- Inserção do campo idade
+- Segmentar as perguntas com mais de uma opção de resposta (uma caixinha para cada resposta)
+- Deixar mais caixas de seleção - reduzir espaço que permite inserção livre.
+- Ampliar faixas salariais (com mais opções também).
+
+## 5.2 - Novos estudos/possibilidades

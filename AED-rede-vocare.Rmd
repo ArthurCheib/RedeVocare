@@ -1,5 +1,5 @@
 ---
-title: "EDA - Relatório Rede Vocare"
+title: "AED - Relatório Rede Vocare"
 author: "Arthur Cheib"
 date: "12 de maio de 2019"
 output: html_document
@@ -32,11 +32,16 @@ Censo 02 - 63/67 respostas: dados cadastrais + gerais
 
 # 2 Cruzamentos
 
-O escopo dos cruzamentos requisitados encontra-se formalizado em [arquivo word](https://docs.google.com/document/d/1tSrEHDH85UIyrhZ_kqPJVLL9fMH8ZMLoespqXv82aNY)
+O escopo dos cruzamentos requisitados encontra-se formalizado em [arquivo word](https://docs.google.com/document/d/1tSrEHDH85UIyrhZ_kqPJVLL9fMH8ZMLoespqXv82aNY) elaborado pela diretoria da rede Vocare e que será alvo de mais duas ou três rodadas de aprimoração (= incorporação de novas perguntas e talvez de algumas variáveis).
 
 ## 2.1 - Webnários Temáticos
 
-Para elaboração deste Gráfico foram filtrados apenas os membros que estão estudando atualmente e que responderam ter disposição de colaborar em projetos igual a "Sim" ou "Talvez". Além disso, dividiu-se estes membros em dois grupos: I) Alta Identificação com a Rede; II) Baixa Identificação com a Rede. Essa divisão foi feita a partir da nota dada por estes membros no quesito identificação com a Rede. Se abaixo da nota média geral (média da nota dada neste memsmo quesitos pelos 63 respondentes do questionário), então foram classificados como "Baixa Identificação", se acima, então "Alta Identificação". 
+Para elaboração deste Gráfico foram filtrados apenas os membros que estão estudando atualmente e que responderam ter disposição de colaborar em projetos igual a "Sim" ou "Talvez". Além disso, dividiu-se estes membros em dois grupos:
+
+I) Alta Identificação com a Rede;
+II) Baixa Identificação com a Rede.
+
+Essa divisão foi feita a partir da nota dada por estes membros no quesito identificação com a Rede. Se abaixo da nota média geral (média da nota dada neste memsmo quesitos pelos 63 respondentes do questionário), então foram classificados como "Baixa Identificação", se acima, então "Alta Identificação". 
 
 ```{r}
 ### Grau de Interesse
@@ -56,7 +61,7 @@ censo_02 %>%
 
 
 ### Escala de Identificação
-escala_identificacao_webnario_02 <- mean(mean(censo_02$IDENTIFICACAO_REDE))
+escala_identificacao_webnario_02 <- mean(censo_02$IDENTIFICACAO_REDE)
 
 censo_02 %>% 
   filter(SE_ESTUDA == "SIM") %>% 
@@ -106,19 +111,6 @@ df_tx_engajamento %>%
   theme(legend.position = "none",
         plot.title = element_text( size = 16))
 ```
-
-## 2.3 - Origem X Raça X Renda
-
-```{r}
-
-```
-
-## 2.4 - Raça X Renda X Ocupação Atual
-
-```{r}
-
-```
-
 
 # 3 Dados Gerais
 
@@ -171,28 +163,6 @@ df_censo_02 %>%
        x = "")
 ```
 
-
-## 3.4 - Alma Mater
-
-```{r}
-censo_01 %>% 
-  count(UNIVERSIDADE) %>% arrange(-n)
-```
-
-
-## 3.5 - Carreira Universitária
-
-```{r}
-censo_01 %>%
-  count(ESTUDOS) %>% arrange(-n)
-```
-
-## 3.6 - Botineiros pelo Mundo
-
-```{r}
-
-```
-
 # 4 Extras
 
 ## 4.1 - Análise de Preenchimento do Formulário 
@@ -235,5 +205,3 @@ summary(df_censo_02$HORA)
 - Segmentar as perguntas com mais de uma opção de resposta (uma caixinha para cada resposta)
 - Deixar mais caixas de seleção - reduzir espaço que permite inserção livre.
 - Ampliar faixas salariais (com mais opções também).
-
-## 5.2 - Novos estudos/possibilidades
